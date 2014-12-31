@@ -32,7 +32,18 @@ I watch and see that a new device called "pidora" shows up on the network.
 
 ## SSH to the server and update its software
 
-The root password by default is "raspberrypi", I logged into the device with ssh and "yum update":
+    $ ssh pidora -l root
+    root@pidora's password:
+
+The root password by default is "raspberrypi", changed immediately:
+
+    root@pidora ~]# passwd
+    Changing password for user root.
+    New password: 
+    Retype new password: 
+    passwd: all authentication tokens updated successfully.
+
+Then "yum update":
 
     [root@pidora ~]# yum update
     Loaded plugins: langpacks, refresh-packagekit
@@ -195,4 +206,39 @@ The root password by default is "raspberrypi", I logged into the device with ssh
     
     Complete!
     [root@pidora ~]# 
+
+Then rebooted (because of the kernel upgrade).
+
+## Wireless setup.
+
+Use the instructions from here: http://fedoraproject.org/wiki/Networking/CLI#Wifi
+
+    nmcli connection edit con-name wlan0
+
+Then use the various sections to set the SSID, etc.
+
+The "nmcli" commands end up generating a file /etc/sysconfig/network-scripts/ifcfg-wlan0 containing the
+following (redacted) content:
+
+    [root@pidora ~]# cat /etc/sysconfig/network-scripts/ifcfg-wlan0 
+    ESSID="NotTheRealNetworkName"
+    MODE=Managed
+    KEY_MGMT=WPA-PSK
+    TYPE=Wireless
+    BOOTPROTO=dhcp
+    DEFROUTE=yes
+    IPV4_FAILURE_FATAL=no
+    IPV6INIT=yes
+    IPV6_AUTOCONF=yes
+    IPV6_DEFROUTE=yes
+    IPV6_PEERDNS=yes
+    IPV6_PEERROUTES=yes
+    IPV6_FAILURE_FATAL=no
+    NAME=wlan0
+    UUID=c4b66b09-abda-400f-8bbf-00b4b2bb9844
+    ONBOOT=yes
+    PEERDNS=yes
+    PEERROUTES=yes
+
+And a file /etc/sysconfig/network-scripts/keys-NotTheRealNetworkName.
 
