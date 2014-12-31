@@ -213,11 +213,17 @@ Then rebooted (because of the kernel upgrade).
 
 Use the instructions from here: http://fedoraproject.org/wiki/Networking/CLI#Wifi
 
+Basically, first do this:
+
+    nmcli device wifi connect NotTheRealNetworkName password NotTheRealPassword
+
+This will connect to the wifi network and create a file named /etc/sysconfig/network-scripts/keys-NotTheRealNetworkName.
+
     nmcli connection edit con-name wlan0
 
 Then use the various sections to set the SSID, etc.
 
-The "nmcli" commands end up generating a file /etc/sysconfig/network-scripts/ifcfg-wlan0 containing the
+The "nmcli" commands end up generating the /etc/sysconfig/network-scripts/ifcfg-wlan0 containing the
 following (redacted) content:
 
     [root@pidora ~]# cat /etc/sysconfig/network-scripts/ifcfg-wlan0 
@@ -240,5 +246,4 @@ following (redacted) content:
     PEERDNS=yes
     PEERROUTES=yes
 
-And a file /etc/sysconfig/network-scripts/keys-NotTheRealNetworkName.
-
+Use the "pifconfig" command (the renamed ifconfig command, don't ask me why!) to verify that things are working.
