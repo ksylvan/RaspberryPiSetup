@@ -97,12 +97,6 @@ This will connect to the wifi network and create a file the needed files in /etc
 
 Use the "pifconfig" command (the renamed ifconfig command, don't ask me why!) to verify that things are working.
 
-Once you have your working wifi connection, you need to diable eth0:
-
-    nmcli connection edit System\ eth0
-    nmcli> set connection.autoconnect no
-    nmcli> save
-    Connection 'System eth0' (5fb06bd0-0bb0-7ffb-45f1-d6edd65f3e03) sucessfully saved.
-    nmcli> quit
-
 Now we can reboot again to ensure that the system auto-connects to the wifi network.
+
+At this point, we have a system configured to connect to the WiFi network.
