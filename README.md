@@ -188,8 +188,9 @@ Now, I shut down the pi, removed the ethernet cable, and restarted it.
 Now I have a Raspberry Pi running Pidora that is a truly portable,
 untethered, wifi-connected server.
 
-I timed its startup, and from the time I plug the power cable in, to the time that the
-blue LED lights up on the wifi USB dongle is ___ seconds!
+I timed its startup, and from the time I plug the power cable in, to
+the time that the blue LED lights up on the wifi USB dongle is under
+30 seconds!
 
 One last note, you will probably want to set up your wireless router
 to give your Raspberry Pi a static IP address. I went into the web
