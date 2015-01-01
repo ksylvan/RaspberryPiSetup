@@ -8,13 +8,32 @@ to use the Pidora image because it contains more updated software.
 
 ## Install Pidora F20 (as of 12/30/14)
 
-1. Start by installing F20 Pidora (from http://www.raspberrypi.org/downloads/ using the Pidora remix torrent file)
-2. On my Fedora 21 laptop, I installed the fedora-arm-installer:
+1. Start by installing F20 Pidora (from
+http://www.raspberrypi.org/downloads/ using the Pidora remix torrent
+file) here: http://downloads.raspberrypi.org/pidora_latest.torrent
+
+2. I inserted a 32GB micro-sd card into my Fedora 20 laptop, then
+unmounted the mount(s):
+
+    $ umount /run/media/ksylvan/*
+
+3. installed the fedora-arm-installer and ran it.
 
     sudo yum install fedora-arm-installer
     fedora-arm-installer
 
-Then, selet the sdcard device, install the image.
+Selet the sdcard device, install the image. This takes a few minutes.
+The fedora-arm-installer will unzip the Pidora-2014-3.zip, verify the
+md5sum of the image, then write it to the device.
+
+When it's done, I popped the microSD card back out and popped it in to have
+access to the partitions:
+
+    [ksylvan@ksylvan-t420 ~]$ df | grep media
+    /dev/mmcblk0p2 1967044   1727772     119652  94% /runmedia/ksylvan/rootfs
+    /dev/mmcblk0p1   51082     22874      28208  45% /runmedia/ksylvan/BOOT
+
+The image is 2GB, with a small boot partition and the root filesystem.
 
 ## Set up the headless file
 
@@ -27,13 +46,27 @@ In the BOOT partition of the micro-sd card, put the following in a file named "h
 
 This resizes the rootfs to the available space on the device (in my case, 32GB).
 
-Then I plug the pi via a wired cable to my uVerse router. On the uVerse router page,
-I watch and see that a new device called "pidora" shows up on the network.
+umount the partitions now:
+
+    $ cd
+    $ sync
+    $ umount /run/media/ksylvan/*
+
+now it's safe to pop out the card and pop it into the RPi.
+
+Next, I connect the RPi via a wired cable to my uVerse router. On the
+uVerse router page and boot it, I watch and see that a new device
+called "pidora" shows up on the network.
 
 ## SSH to the server and update its software
 
-    $ ssh pidora -l root
+    [ksylvan@ksylvan-t420 ~]$ ssh root@pidora
+    The authenticity of host 'pidora (2602:306:309a:96f0:ba27:ebff:fea2:3afe)' can't be established.
+    ECDSA key fingerprint is ef:82:48:79:0e:e0:59:db:38:89:35:d7:01:03:ec:23.
+    Are you sure you want to continue connecting (yes/no)? yes
+    Warning: Permanently added 'pidora,2602:306:309a:96f0:ba27:ebff:fea2:3afe' (ECDSA) to the list of known hosts.
     root@pidora's password:
+    [root@pidora ~]#
 
 The root password by default is "raspberrypi", changed immediately:
 
@@ -47,25 +80,6 @@ Then "yum update":
 
     [root@pidora ~]# yum update
     Loaded plugins: langpacks, refresh-packagekit
-    pidora                                                      | 3.9 kB  00:00     
-    pidora-rpfr-updates                                         | 3.7 kB  00:00     
-    pidora-updates                                              | 3.8 kB  00:00     
-    (1/5): pidora-rpfr-updates/20/arm/primary_db                |  20 kB  00:10     
-    (2/5): pidora-updates/20/arm/group_gz                       | 394 kB  00:12     
-    (3/5): pidora-rpfr-updates/20/arm/group_gz                  | 394 kB  00:13     
-    (4/5): pidora-updates/20/arm/primary_db                     | 6.1 MB  00:26     
-    (5/5): pidora/20/arm/primary_db                             |  16 MB  00:33     
-    pidora/20/arm/group_gz                                      | 394 kB  00:07     
-    Resolving Dependencies
-    --> Running transaction check
-    ---> Package bash.armv6hl 0:4.2.47-2.fc20 will be updated
-    [...]
-    Transaction Summary
-    ================================================================================
-    Install   1 Package
-    Upgrade  10 Packages
-    Total download size: 55 M
-    Is this ok [y/d/N]: y
     [...]
     Installed:
       raspberrypi-kernel.armv6hl 0:3.12.26-1.20140808git4ab8abb.rpfr20
@@ -83,20 +97,81 @@ Then "yum update":
     Complete!
     [root@pidora ~]# 
 
-Then rebooted (because of the kernel upgrade).
+This took about 10-15 minutes to complete. Once done, I rebooted
+(because of the kernel upgrade).
+
+    [root@pidora ~]# shutdown -r now
+    Connection to pidora closed by remote host.
+    Connection to pidora closed.
 
 ## Wireless setup.
 
 Use the instructions from here: http://fedoraproject.org/wiki/Networking/CLI#Wifi
 
-Basically, first do this:
+You can use this command to scan the wireless networks:
 
-    nmcli device wifi connect NotTheRealNetworkName password NotTheRealPassword
+    nmcli device wifi list
 
-This will connect to the wifi network and create a file the needed files in /etc/sysconfig/network-scripts/ (a file called ifcfg-NotTheRealNetworkName and keys-NotTheRealNetworkName).
+And then do this:
 
-Use the "pifconfig" command (the renamed ifconfig command, don't ask me why!) to verify that things are working.
+    nmcli device wifi connect YourNetworkSSID password NotTheRealPassword
+
+This will connect to the wifi network named YourNetworkSSID and create
+the needed files in /etc/sysconfig/network-scripts/ (a file called
+ifcfg-YourNetworkSSID and keys-YourNetworkSSID).
+
+Use the "pifconfig" command to verify that things are working.
 
 Now we can reboot again to ensure that the system auto-connects to the wifi network.
 
 At this point, we have a system configured to connect to the WiFi network.
+
+## Problems with the Pidora "headless" mode
+
+The way the Pidora headless mode works is that it runs /usr/bin/headon early in the boot
+process. The intent is to be able to login to your RPi without having to have a monitor
+and keyboard handy.
+
+The /usr/bin/headon script does a few things if it finds the /boot/headless file:
+
+1. Start the sshd service and stop and disable the firstboot graphical
+service.
+
+2. Set up the rootfs-resize service and runs it (if the /boot/headless file contains the
+RESIZE directive).
+
+3. Set up /etc/sysconfig/network-scripts/ifcfg-eth0
+
+4. restart NetworkManager
+
+5. flash the IP address (using the RPi LED) and read the IP address (through the
+speakers).
+
+What this means is that if you typically don't have your ethernet
+cable plugged into the device (or only intend to use it on Wireless
+only), the boot process will have to time out before going on.
+
+So, in order to create a truly headless server, I did a few things:
+
+1. Remove /boot/headless
+
+    [root@pidora ~]# rm /boot/headless
+    rm: remove regular file ‘/boot/headless’? y
+    [root@pidora ~]#
+
+2. Set the default target to multi-user.target (no graphical desktop, saves some memory).
+
+    [root@pidora ~]# systemctl set-default multi-user.target
+
+3. Use "ssh -X" and system-config-date to set the timezone (not strictly necessary).
+
+4. I made the ifcfg-YourNetworkSSID and keys-YourNetworkSSID files read-only (even
+to root)
+
+    [root@pidora ~]# cd /etc/sysconfig/network-scripts/
+    [root@pidora network-scripts]# chattr +i *YourNetworkSSID*
+    [root@pidora network-scripts]# echo testing >> keys-YourNetworkSSID
+    -bash: keys-YourNetworkSSID: Permission denied
+    [root@pidora network-scripts]#
+
+Now, I shut down the pi, removed the ethernet cable, and restarted it.
