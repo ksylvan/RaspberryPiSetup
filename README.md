@@ -151,7 +151,10 @@ What this means is that if you typically don't have your ethernet
 cable plugged into the device (or only intend to use it on Wireless
 only), the boot process will have to time out before going on.
 
-So, in order to create a truly headless server, I did a few things:
+In any case, all of this network file setup and network restarts take time.
+
+So, in order to create a truly headless server that boots fast, I did
+a few things:
 
 1. Remove /boot/headless
 
@@ -159,13 +162,17 @@ So, in order to create a truly headless server, I did a few things:
     rm: remove regular file ‘/boot/headless’? y
     [root@pidora ~]#
 
+So now /usr/bin/headon does nothing.
+
 2. Set the default target to multi-user.target (no graphical desktop, saves some memory).
 
     [root@pidora ~]# systemctl set-default multi-user.target
 
 3. Use "ssh -X" and system-config-date to set the timezone (not strictly necessary).
 
-4. I made the ifcfg-YourNetworkSSID and keys-YourNetworkSSID files read-only (even
+4. Next, protect the WIFI network setup from being overwritten.
+
+I made the ifcfg-YourNetworkSSID and keys-YourNetworkSSID files read-only (even
 to root)
 
     [root@pidora ~]# cd /etc/sysconfig/network-scripts/
@@ -175,3 +182,17 @@ to root)
     [root@pidora network-scripts]#
 
 Now, I shut down the pi, removed the ethernet cable, and restarted it.
+
+## Fast booting headless (and portable) server
+
+Now I have a Raspberry Pi running Pidora that is a truly portable,
+untethered, wifi-connected server.
+
+I timed its startup, and from the time I plug the power cable in, to the time that the
+blue LED lights up on the wifi USB dongle is ___ seconds!
+
+One last note, you will probably want to set up your wireless router
+to give your Raspberry Pi a static IP address. I went into the web
+interface for my uVerse router and gave my Pi a fixed allocated IP
+address, which also makes it possible to forward ssh or https traffic
+to it.
