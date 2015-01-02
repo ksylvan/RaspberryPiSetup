@@ -244,3 +244,73 @@ Then rebooted and verified that wifi power management is off:
 At this point, I shutdown the RPi, and put it in a corner of my
 office, connected to power. The RPi now serves as an always-on
 headless server.
+
+## Adding Google Two-Step authentication for SSH on Pidora
+
+Date: 1/2/2015
+
+A day after setting up and placing my RPi on the net (via
+port-forwarding using the uVerse gateway), I am seeing messages like
+this when logging into the server:
+
+    Last failed login: Fri Jan  2 10:56:51 PST 2015 from 122.225.97.77 on ssh:notty
+    There were 876 failed login attempts since the last successful login.
+    Last login: Fri Jan  2 10:46:45 2015 from 209.66.74.34
+
+Obviously, the box is under attack by someone who is trying to ssh
+into it.
+
+So I added the google-authenticator to the SSH login process. I can
+still use password-less key-based ssh logins, but attackers will have
+to go through the google-authenticator steps before getting in.
+
+I used this web page as a reference:
+http://www.sbprojects.com/projects/raspberrypi/ga.php
+
+Start by installing the google-authenticator RPM:
+
+    [root@pidora log]# yum install google-authenticator
+    Loaded plugins: langpacks, refresh-packagekit
+    Resolving Dependencies
+    --> Running transaction check
+    ---> Package google-authenticator.armv6hl 0:1.0-0.gita096a62.fc20.2 will be installed
+    --> Finished Dependency Resolution
+
+The package in Fedora contains both the PAM module and the
+google-authenticator binary.
+
+Then run the google-authenticator binary and answer "y" to all questions:
+
+    [root@pidora ~]# google-authenticator
+
+    Do you want authentication tokens to be time-based (y/n) y
+
+The program outputs a QR code you can scan on your phone using the
+Google Authenticator app on iOS and Android, or you can manually add
+the info with the data it displays.
+
+Next, enable its use in the sshd PAM setup:
+
+    [root@pidora ~]# echo 'auth required pam_google_authenticator.so' >> /etc/pam.d/sshd
+
+And edit the file /etc/ssh/sshd_config to set
+ChallengeResponseAuthentication to yes (that line is commented out by
+default).
+
+Now, restart the sshd service:
+
+    [root@pidora ~]# systemctl restart sshd.service
+
+Do not disconnect from your session till you have verified that it
+works! In my case, I verified that my existing key-based
+authentication worked, then I tried logging in from another machine:
+
+    kayvan@pox[~]:501$ ssh root@XXXXXXXXXXX
+    Password:
+    Verification code:
+    Last login: Fri Jan  2 12:20:16 2015 from 209.66.74.34
+    [root@pidora ~]#
+
+So even if someone manages to break the password (very little chance
+of that, but still), they have to put in the time-based verification
+code.
