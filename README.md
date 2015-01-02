@@ -215,11 +215,15 @@ with one major change. The iwconfig script needed to be called with an explicit 
     IF=$1
     STATUS=$2
     me=$(basename $0)
-    logger() { echo "${me}: $1" >> /var/log/messages; }
     if [ "${IF}" = "wlan0" ] && [ "${STATUS}" = "up" ]; then
        /sbin/iwconfig ${IF} power off
-       logger "${IF}: turning off powersave mode to prevent constant reconnections"
+       echo "${IF}: turning off powersave mode to prevent constant reconnections"
     fi
     [root@pidora ~]# chmod +x /etc/NetworkManager/dispatcher.d/02-wlan-powersave-off
 
-Then rebooted and verified that "iwconfig wlan0" showed power management is off:
+Then rebooted and verified that wifi power management is off:
+
+    [root@pidora ~]# journalctl --no-pager --reverse | grep 02-wlan-powersave-off 
+    Dec 31 16:00:31 pidora.local nm-dispatcher.action[230]: 02-wlan-powersave-off: wlan0: turning off powersave mode to prevent constant reconnections
+    [root@pidora ~]# iwlist wlan0 power 
+    wlan0     Current mode:off
