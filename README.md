@@ -3,8 +3,9 @@ RaspberryPiSetup
 
 What I did to set up my home Raspberry Pi as a headless server.
 
-After playing around with the latest Raspbian (from the Raspberry Pi foundation NOOBS image), I chose
-to use the Pidora image because it contains more updated software.
+After playing around with the latest Raspbian (from the Raspberry Pi
+foundation NOOBS image), I chose to use the Pidora image because it
+contains more updated software.
 
 ## Install Pidora F20 (as of 12/30/14)
 
@@ -26,8 +27,8 @@ Selet the sdcard device, install the image. This takes a few minutes.
 The fedora-arm-installer will unzip the Pidora-2014-3.zip, verify the
 md5sum of the image, then write it to the device.
 
-When it's done, I popped the microSD card back out and popped it in to have
-access to the partitions:
+When it's done, I popped the microSD card back out and popped it in to
+have access to the partitions:
 
     [ksylvan@ksylvan-t420 ~]$ df | grep media
     /dev/mmcblk0p2 1967044   1727772     119652  94% /runmedia/ksylvan/rootfs
@@ -37,22 +38,25 @@ The image is 2GB, with a small boot partition and the root filesystem.
 
 ## Set up the headless file
 
-Based on the information here: http://zenit.senecac.on.ca/wiki/index.php/Pidora-Headless-Mode
+Based on the information here:
+http://zenit.senecac.on.ca/wiki/index.php/Pidora-Headless-Mode
 
-In the BOOT partition of the micro-sd card, put the following in a file named "headless":
+In the BOOT partition of the micro-sd card, put the following in a
+file named "headless":
 
     RESIZE
     SWAP=1024
 
-This resizes the rootfs to the available space on the device (in my case, 32GB).
+This resizes the rootfs to the available space on the device (in my
+case, 32GB).
 
-umount the partitions now:
+Unmount the partitions now:
 
     $ cd
     $ sync
     $ umount /run/media/ksylvan/*
 
-now it's safe to pop out the card and pop it into the RPi.
+Now it's safe to pop out the card and pop it into the RPi.
 
 Next, I connect the RPi via a wired cable to my uVerse router. On the
 uVerse router page and boot it, I watch and see that a new device
@@ -106,7 +110,8 @@ This took about 10-15 minutes to complete. Once done, I rebooted
 
 ## Wireless setup.
 
-Use the instructions from here: http://fedoraproject.org/wiki/Networking/CLI#Wifi
+Use the instructions from here:
+http://fedoraproject.org/wiki/Networking/CLI#Wifi
 
 You can use this command to scan the wireless networks:
 
@@ -122,36 +127,40 @@ ifcfg-YourNetworkSSID and keys-YourNetworkSSID).
 
 Use the "pifconfig" command to verify that things are working.
 
-Now we can reboot again to ensure that the system auto-connects to the wifi network.
+Now we can reboot again to ensure that the system auto-connects to the
+wifi network.
 
-At this point, we have a system configured to connect to the WiFi network.
+At this point, we have a system configured to connect to the WiFi
+network.
 
 ## Problems with the Pidora "headless" mode
 
-The way the Pidora headless mode works is that it runs /usr/bin/headon early in the boot
-process. The intent is to be able to login to your RPi without having to have a monitor
-and keyboard handy.
+The way the Pidora headless mode works is that it runs /usr/bin/headon
+early in the boot process. The intent is to be able to login to your
+RPi without having to have a monitor and keyboard handy.
 
-The /usr/bin/headon script does a few things if it finds the /boot/headless file:
+The /usr/bin/headon script does a few things if it finds the
+/boot/headless file:
 
 1. Start the sshd service and stop and disable the firstboot graphical
 service.
 
-2. Set up the rootfs-resize service and runs it (if the /boot/headless file contains the
-RESIZE directive).
+2. Set up the rootfs-resize service and runs it (if the /boot/headless
+file contains the RESIZE directive).
 
 3. Set up /etc/sysconfig/network-scripts/ifcfg-eth0
 
 4. restart NetworkManager
 
-5. flash the IP address (using the RPi LED) and read the IP address (through the
-speakers).
+5. flash the IP address (using the RPi LED) and read the IP address
+(through the speakers).
 
 What this means is that if you typically don't have your ethernet
 cable plugged into the device (or only intend to use it on Wireless
 only), the boot process will have to time out before going on.
 
-In any case, all of this network file setup and network restarts take time.
+In any case, all of this network file setup and network restarts take
+time.
 
 So, in order to create a truly headless server that boots fast, I did
 a few things:
@@ -164,16 +173,18 @@ a few things:
 
 So now /usr/bin/headon does nothing.
 
-2. Set the default target to multi-user.target (no graphical desktop, saves some memory).
+2. Set the default target to multi-user.target (no graphical desktop,
+saves some memory).
 
     [root@pidora ~]# systemctl set-default multi-user.target
 
-3. Use "ssh -X" and system-config-date to set the timezone (not strictly necessary).
+3. Use "ssh -X" and system-config-date to set the timezone (not
+strictly necessary).
 
 4. Next, protect the WIFI network setup from being overwritten.
 
-I made the ifcfg-YourNetworkSSID and keys-YourNetworkSSID files read-only (even
-to root)
+I made the ifcfg-YourNetworkSSID and keys-YourNetworkSSID files
+read-only (even to root)
 
     [root@pidora ~]# cd /etc/sysconfig/network-scripts/
     [root@pidora network-scripts]# chattr +i *YourNetworkSSID*
@@ -181,7 +192,8 @@ to root)
     -bash: keys-YourNetworkSSID: Permission denied
     [root@pidora network-scripts]#
 
-Now, I shut down the pi, removed the ethernet cable, and restarted it.
+Now, I shut down the RPi, removed the ethernet cable, and restarted
+it.
 
 ## Fast booting headless (and portable) server
 
@@ -202,13 +214,14 @@ to it.
 
 Every once in a while, it seems the Wifi speed is very very slow.
 
-The command "iwconfig wlan0" showed that powe management was on,
-which might be responsible for the occasionally slow wireless network
+The command "iwconfig wlan0" showed that powe management was on, which
+might be responsible for the occasionally slow wireless network
 connection.
 
 I followed the instructions here:
 https://ask.fedoraproject.org/en/question/8168/proper-disabling-of-wifi-power-management/
-with one major change. The iwconfig script needed to be called with an explicit path.
+with one major change. The iwconfig script needed to be called with an
+explicit path.
 
     [root@pidora ~]# cat /etc/NetworkManager/dispatcher.d/02-wlan-powersave-off
     #!/bin/sh
@@ -227,3 +240,7 @@ Then rebooted and verified that wifi power management is off:
     Dec 31 16:00:31 pidora.local nm-dispatcher.action[230]: 02-wlan-powersave-off: wlan0: turning off powersave mode to prevent constant reconnections
     [root@pidora ~]# iwlist wlan0 power 
     wlan0     Current mode:off
+
+At this point, I shutdown the RPi, and put it in a corner of my
+office, connected to power. The RPi now serves as an always-on
+headless server.
