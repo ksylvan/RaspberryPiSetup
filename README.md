@@ -197,3 +197,29 @@ to give your Raspberry Pi a static IP address. I went into the web
 interface for my uVerse router and gave my Pi a fixed allocated IP
 address, which also makes it possible to forward ssh or https traffic
 to it.
+
+## Disable Wifi Dongle power management
+
+Every once in a while, it seems the Wifi speed is very very slow.
+
+The command "iwconfig wlan0" showed that powe management was on,
+which might be responsible for the occasionally slow wireless network
+connection.
+
+I followed the instructions here:
+https://ask.fedoraproject.org/en/question/8168/proper-disabling-of-wifi-power-management/
+with one major change. The iwconfig script needed to be called with an explicit path.
+
+    [root@pidora ~]# cat /etc/NetworkManager/dispatcher.d/02-wlan-powersave-off
+    #!/bin/sh
+    IF=$1
+    STATUS=$2
+    me=$(basename $0)
+    logger() { echo "${me}: $1" >> /var/log/messages; }
+    if [ "${IF}" = "wlan0" ] && [ "${STATUS}" = "up" ]; then
+       /sbin/iwconfig ${IF} power off
+       logger "${IF}: turning off powersave mode to prevent constant reconnections"
+    fi
+    [root@pidora ~]# chmod +x /etc/NetworkManager/dispatcher.d/02-wlan-powersave-off
+
+Then rebooted and verified that "iwconfig wlan0" showed power management is off:
