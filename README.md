@@ -437,8 +437,9 @@ And now add the following to the /etc/lighttpd/lighttpd.conf file:
       accesslog.filename = "/var/log/lighttpd/mypidora_saccess.log"
     }
 
-YOURSERVERNAME is whatever you specified earlier when you generated
-the self-signed certificate.
+Replace the 192.168.1.243 with your RPi's local IP and YOURSERVERNAME
+is whatever you specified earlier when you generated the self-signed
+certificate.
 
 Then restart lighttpd again:
 
@@ -450,3 +451,7 @@ to your ssh session in a browser window.
 
 With the extra security of the google-authenticator, I chose not to
 add the .htaccess based login (as Remy did in his post).
+
+With the above setup, I also connected the https (443) port into my
+uVerse gateway to the Raspberry Pi, providing ssh access via the
+browser even when the SSH port is blocked.
