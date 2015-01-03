@@ -314,3 +314,139 @@ authentication worked, then I tried logging in from another machine:
 So even if someone manages to break the password (very little chance
 of that, but still), they have to put in the time-based verification
 code.
+
+## Shellinabox and Lighttpd
+
+I adapted the Raspbian-based tutorial here:
+http://blog.remibergsma.com/2013/03/15/always-available-linux-terminal-shell-in-a-box-on-raspberry-pi/
+
+Start by installing lighttpd and shellinabox:
+
+    [root@pidora ~]# yum install lighttpd shellinaboz
+    [...]
+    Installed:
+      lighttpd.armv6hl 0:1.4.35-1.fc20
+       shellinabox.armv6hl 0:2.14-25.git88822c1.fc20
+    Dependency Installed:
+       compat-lua-libs.armv6hl 0:5.1.4-5.fc20
+    Complete!
+
+Choose your favorite settings from the options documented via "man
+shellinaboxd" to put in /etc/sysconfig/shellinaboxd, but you'll have
+to include --disable-ssl and --localhost-only.
+
+These are the options I picked:
+
+    [root@pidora ~]# echo 'OPTS="--no-beep -s /terminal:SSH --disable-ssl --localhost-only"' >> /etc/sysconfig/shellinaboxd
+
+And enable and start the service:
+
+    [root@pidora ~]# systemctl enable shellinaboxd.service
+    ln -s '/usr/lib/systemd/system/shellinaboxd.service' '/etc/systemd/system/multi-user.target.wants/shellinaboxd.service'
+    [root@pidora ~]# systemctl start shellinaboxd.service
+
+If you do "netstat -ntl", you should see something like the following,
+indicating that shellinabox daemon is listening on localhost:4200
+
+    [root@pidora ~]# netstat -ntl
+    Active Internet connections (only servers)
+    Proto Recv-Q Send-Q Local Address           Foreign Address         State
+    tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+    tcp        0      0 127.0.0.1:4200          0.0.0.0:*               LISTEN
+    tcp6       0      0 :::22                   :::*                    LISTEN
+
+Next, we will be setting up lighttpd to do a reverse proxy and provide the
+SSL functionality).
+
+First, add the following to the end of /etc/lighttpd/lighttpd.conf:
+
+    proxy.server = (
+     "/terminal" =>
+      ( (
+        "host" => "127.0.0.1",
+        "port" => 4200
+      ) )
+    )
+
+Next, we must enable the proxy.server functionality. In
+/etc/lighttpd/modules.conf, modify the server.modules section to read
+as follows:
+
+    server.modules = (
+      "mod_access",
+    #  "mod_alias",
+    #  "mod_auth",
+    #  "mod_evasive",
+    #  "mod_redirect",
+    #  "mod_rewrite",
+    #  "mod_setenv",
+    #  "mod_usertrack",
+      "mod_proxy",
+    )
+
+Then enable and start the lighttpd server:
+
+    [root@pidora ~]# systemctl enable lighttpd.service
+    ln -s '/usr/lib/systemd/system/lighttpd.service' '/etc/systemd/system/multi-user.target.wants/lighttpd.service'
+    [root@pidora ~]# systemctl start lighttpd.service
+
+Now you should be able to connect to your Raspberry Pi IP address
+inside your network by opening http://yourpi/terminal and you should
+see a login prompt.  If you installed the google-authenticator for
+2-factor authentication of ssh login (as I have), then you will see a
+"Verification code:" prompt as well!
+
+I would not recommend making this available to the wider network,
+though, not without the SSL piece we will set up next. Following the
+exact same instructions I found in Remy Bergsma's blog, we will set up
+the self-signed certificate:
+
+    # openssl genrsa -des3 -out mypidora.key.passwd 2048
+
+This will ask you for a password, twice. Pick something easy, like
+"password", because in the next step we remove the password.
+
+    # openssl rsa -in mypidora.key.passwd -out mypidora.key
+    Enter pass phrase for mypidora.key.passwd:
+    writing RSA key
+
+If you don't remove the pass phrase, you will have to enter it each
+time the web server restarts, which won't work for your headless server.
+
+    # openssl req -new -key mypidora.key -out mypidora.csr
+
+Answer the questions with reasonable values and you will have a
+"mypidra.csr" file to use in the next step:
+
+    # openssl x509 -in mypidora.csr -out mypidora.pem -req -signkey mypidora.key -days 3650
+    # cat mypidora.key >> mypidora.pem
+
+The "mypidora.pem" file now contains the self signed certificate,
+which we can use for lighttpd.
+
+    # mkdir /etc/lighttpd/ssl
+    # cp mypidora.pem /etc/lighttpd/ssl
+
+And now add the following to the /etc/lighttpd/lighttpd.conf file:
+
+    $SERVER["socket"] == "192.168.1.234:443" {
+      ssl.engine = "enable"
+      ssl.pemfile = "/etc/lighttpd/ssl/mypidora.pem"
+      server.name = "YOURSERVERNAME"
+      server.errorlog = "/var/log/lighttpd/mypidora_serror.log"
+      accesslog.filename = "/var/log/lighttpd/mypidora_saccess.log"
+    }
+
+YOURSERVERNAME is whatever you specified earlier when you generated
+the self-signed certificate.
+
+Then restart lighttpd again:
+
+    # systemctl restart lighttpd.service
+
+Now you should be able to navigate to https://yourpi/terminal and
+ignore the warning in your browser and you will have encrypted traffic
+to your ssh session in a browser window.
+
+With the extra security of the google-authenticator, I chose not to
+add the .htaccess based login (as Remy did in his post).
