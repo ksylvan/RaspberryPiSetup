@@ -455,3 +455,40 @@ add the .htaccess based login (as Remy did in his post).
 With the above setup, I also connected the https (443) port into my
 uVerse gateway to the Raspberry Pi, providing ssh access via the
 browser even when the SSH port is blocked.
+
+## Installing Webmin RPM (for web based system administration) on Pidora
+
+Tried to install the webmin RPM (seeing as it was a perl based
+architecture independent package):
+
+    # wget http://prdownloads.sourceforge.net/webadmin/webmin-1.730-1.noarch.rpm
+    # wget http://www.webmin.com/jcameron-key.asc
+    # wget http://www.webmin.com/jcameron-key.asc
+    # rpm -Uvh webmin-1.730-1.noarch.rpm
+    Preparing...                          ################################# [100%]
+    Unable to identify operating system
+    error: %pre(webmin-1.730-1.noarch) scriptlet failed, exit status 2
+    error: webmin-1.730-1.noarch: install failed
+
+So I looked at the scripts:
+
+    # rpm -qp --scripts webmin-1.730-1.noarch.rpm > SCRIPTS
+
+And it was easy to see the problem is with the way the webmin
+pre-install tries to identify the Linux distribution based on looking
+at the output of uname and of various files (like /etc/redhat-release).
+
+So the fix is easy:
+
+    # mv /etc/redhat-release /etc/redhat-release-
+    # echo "Fedora release 20 (Heisenbug)" > /etc/redhat-release
+    # rpm -Uvh webmin-1.730-1.noarch.rpm Preparing...                          #    ################################ [100%]
+    Operating system is Fedora Linux
+    Updating / installing...
+       1:webmin-1.730-1                   ################################# [100%]
+    Webmin install complete. You can now login to http://pidora.local:10000/
+    as root with your root password.
+    # mv -f /etc/redhat-release- /etc/redhat-release
+
+And that's it! Webmin works (and reports "Operating system: Fedora Linux 20"
+on its initial screen, which is close enough).
